@@ -5,11 +5,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class URLTest
 {
@@ -150,6 +153,27 @@ class URLTest
 
         assertThat(expected.getUrl1()).isEqualTo(actual.getUrl1());
         assertThat(expected.getUrl2()).isEqualTo(actual.getUrl2());
+    }
+
+    /**
+     * testMethod to validate if url being created is proper when using createUrlOldWay method
+     */
+    @Test
+    void testCreateUrlOldWay() {
+        JsonObject jObj = new JsonObject();
+        jObj.put("protocol", "http");
+        jObj.put("host", "127.0.0.0");
+        Long port = 8090L;
+        jObj.put("port", port);
+        Readers.URLReader urlReader = new Readers.URLReader();
+        URL url = null;
+        try {
+            url = urlReader.createUrlOldWay(jObj);
+        } catch (MalformedURLException e) {
+            fail("Malformed Exception thrown :"+e);
+        }
+        assertTrue(url.toString().equals("http://127.0.0.0:8090"));
+
     }
 
 
