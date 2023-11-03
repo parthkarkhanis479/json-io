@@ -40,7 +40,7 @@ public class JsonReaderTest {
      * testMethod to test different control flows of jsonToMaps Method and array control flow of adjustOutputMapMethod
      */
     @Test
-    void testAdjustOutputMapArray()
+    void testJsonToMaps()
     {
         String jsonString  = "[{\"a\":[1,2,3]}]";
         InputStream targetStream = new ByteArrayInputStream(jsonString.getBytes());
