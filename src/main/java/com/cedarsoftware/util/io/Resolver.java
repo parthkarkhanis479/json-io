@@ -197,21 +197,13 @@ public abstract class Resolver implements ReaderContext
             }
             else
             {
-                Object special;
-                if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null)
-                {
-                    jsonObj.target = special;
-                }
-                else
-                {
-                    traverseFields(stack, jsonObj);
-                }
+                setJsonObjTarget(jsonObj,stack);
             }
         }
         return (T) root.target;
     }
 
-    protected abstract Object readWithFactoryIfExists(final Object o, final Class compType, final Deque<JsonObject> stack);
+    protected abstract void setJsonObjTarget(final JsonObject jsonObj, final Deque<JsonObject> stack);
 
     protected abstract void traverseCollection(Deque<JsonObject> stack, JsonObject jsonObj);
 
@@ -374,7 +366,7 @@ public abstract class Resolver implements ReaderContext
     protected Object createInstanceUsingType(JsonObject jsonObj)
     {
         String type = jsonObj.type;
-        Class c = MetaUtils.classForName(type, readOptions.getClassLoader());
+        Class c = MetaUtilsHelper.classForName(type, readOptions.getClassLoader());
         
         if (c == null)
         {   // Unable to find class in the JVM.
@@ -424,7 +416,7 @@ public abstract class Resolver implements ReaderContext
             }
             else if (c == Class.class)
             {
-                mate = MetaUtils.classForName((String) jsonObj.getValue(), readOptions.getClassLoader());
+                mate = MetaUtilsHelper.classForName((String) jsonObj.getValue(), readOptions.getClassLoader());
             }
             else if (EnumSet.class.isAssignableFrom(c))
             {
@@ -550,7 +542,7 @@ public abstract class Resolver implements ReaderContext
     {
         String enumClassName = (String) jsonObj.get("@enum");
         Class enumClass = enumClassName == null ? null
-                : MetaUtils.classForName(enumClassName, readOptions.getClassLoader());
+                : MetaUtilsHelper.classForName(enumClassName, readOptions.getClassLoader());
         Object[] items = jsonObj.getArray();
         if (items == null || items.length == 0)
         {

@@ -78,6 +78,12 @@ public class JsonReader implements Closeable, ReaderContext
     private final ReadOptions readOptions;
     private final JsonParser parser;
 
+    public static void throwIfNull(Object value, String message) {
+        if (value == null) {
+            throw new IllegalArgumentException(message);
+        }
+    }
+
     /**
      * Subclass this interface and create a class that will return a new instance of the
      * passed in Class (c).  Your factory subclass will be called when json-io encounters an
@@ -128,7 +134,7 @@ public class JsonReader implements Closeable, ReaderContext
         }
 
         default void gatherRemainingValues(ReaderContext context, JsonObject jObj, List<Object> arguments, Set<String> excludedFields) {
-            Convention.throwIfNull(jObj, "JsonObject cannot be null");
+            throwIfNull(jObj, "JsonObject cannot be null");
 
             for (Map.Entry<Object, Object> entry : jObj.entrySet()) {
                 if (!excludedFields.contains(entry.getKey().toString())) {
@@ -136,7 +142,7 @@ public class JsonReader implements Closeable, ReaderContext
 
                     if (o instanceof JsonObject) {
                         JsonObject sub = (JsonObject) o;
-                        Object value = context.reentrantConvertParsedMapsToJava(sub, MetaUtils.classForName(sub.getType(), context.getReadOptions().getClassLoader()));
+                        Object value = context.reentrantConvertParsedMapsToJava(sub, MetaUtilsHelper.classForName(sub.getType(), context.getReadOptions().getClassLoader()));
 
                         if (value != null) {
                             if (sub.getType() != null || sub.getTargetClass() != null) {
@@ -262,7 +268,7 @@ public class JsonReader implements Closeable, ReaderContext
     @Deprecated
     public static void assignInstantiator(String className, ClassFactory factory)
     {
-        Class<?> clazz = MetaUtils.classForName(className, JsonReader.class.getClassLoader());
+        Class<?> clazz = MetaUtilsHelper.classForName(className, JsonReader.class.getClassLoader());
         ReadOptions.assignInstantiator(clazz, factory);
     }
 
@@ -388,8 +394,8 @@ public class JsonReader implements Closeable, ReaderContext
      * @return Map containing the content from the JSON input.  Each Map represents an object from the input.
      */
     public static <T> T toMaps(InputStream inputStream, ReadOptions readOptions) {
-        Convention.throwIfNull(inputStream, "inputStream cannot be null");
-        Convention.throwIfNull(readOptions, "readOptions cannot be null");
+        throwIfNull(inputStream, "inputStream cannot be null");
+        throwIfNull(readOptions, "readOptions cannot be null");
 
         try (JsonReader jr = new JsonReader(inputStream, new ReadOptions(readOptions).returnType(ReturnType.JSON_VALUES), null)) {
             return (T) jr.readObject(Map.class);

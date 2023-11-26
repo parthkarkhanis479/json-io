@@ -78,6 +78,19 @@ public class ObjectResolver extends Resolver
         this.missingFieldHandler = readOptions.getMissingFieldHandler();
     }
 
+    @Override
+    protected void setJsonObjTarget(JsonObject jsonObj, Deque<JsonObject> stack) {
+        Object special;
+        if ((special = readWithFactoryIfExists(jsonObj, null, stack)) != null)
+        {
+            jsonObj.target = special;
+        }
+        else
+        {
+            traverseFields(stack, jsonObj);
+        }
+    }
+
     /**
      * Walk the Java object fields and copy them from the JSON object to the Java object, performing
      * any necessary conversions on primitives, or deep traversals for field assignments to other objects,
@@ -318,32 +331,7 @@ public class ObjectResolver extends Resolver
             }
             else if (rhs instanceof JsonObject)
             {
-                final JsonObject jObj = (JsonObject) rhs;
-                final Long ref = jObj.getReferenceId();
-
-                if (ref != null)
-                { // Correct field references
-                    final JsonObject refObject = this.getReferences().get(ref);
-                    storeMissingField(target, missingField, refObject.target);
-                }
-                else
-                {   // Assign ObjectMap's to Object (or derived) fields
-                    // check that jObj as a type
-                    if (jObj.getType() != null)
-                    {
-                        Object createJavaObjectInstance = createInstance(null, jObj);
-                        // TODO: Check is finished here?
-                        if (!Primitives.needsNoTracing(jObj.getTargetClass()))
-                        {
-                            stack.addFirst((JsonObject) rhs);
-                        }
-                        storeMissingField(target, missingField, createJavaObjectInstance);
-                    } 
-                    else //no type found, just notify.
-                    {
-                        storeMissingField(target, missingField, null);
-                    }
-                }
+                handleMissingFieldForJsonObject(stack,rhs, missingField,target);
             }
             else
             {
@@ -360,6 +348,37 @@ public class ObjectResolver extends Resolver
                     + safeToString(target) + " with value: " + rhs;
             throw new JsonIoException(message, e);
         }
+    }
+
+    protected void handleMissingFieldForJsonObject(final Deque<JsonObject> stack,final Object rhs,
+                                                   final String missingField ,final Object target) {
+        final JsonObject jObj = (JsonObject) rhs;
+        final Long ref = jObj.getReferenceId();
+
+        if (ref != null)
+        { // Correct field references
+            final JsonObject refObject = this.getReferences().get(ref);
+            storeMissingField(target, missingField, refObject.target);
+        }
+        else
+        {   // Assign ObjectMap's to Object (or derived) fields
+            // check that jObj as a type
+            if (jObj.getType() != null)
+            {
+                Object createJavaObjectInstance = createInstance(null, jObj);
+                // TODO: Check is finished here?
+                if (!Primitives.needsNoTracing(jObj.getTargetClass()))
+                {
+                    stack.addFirst((JsonObject) rhs);
+                }
+                storeMissingField(target, missingField, createJavaObjectInstance);
+            }
+            else //no type found, just notify.
+            {
+                storeMissingField(target, missingField, null);
+            }
+        }
+
     }
 
     /**
@@ -424,7 +443,7 @@ public class ObjectResolver extends Resolver
         String mayEnumClasName = (String)jsonObj.get("@enum");
         if (mayEnumClasName != null)
         {
-            mayEnumClass = MetaUtils.classForName(mayEnumClasName, classLoader);
+            mayEnumClass = MetaUtilsHelper.classForName(mayEnumClasName, classLoader);
         }
 
         final boolean isImmutable = className != null && className.startsWith("java.util.Immutable");
@@ -665,7 +684,7 @@ public class ObjectResolver extends Resolver
             }
             else
             {
-                if (element instanceof String && "".equals(((String) element).trim()) && compType != String.class && compType != Object.class)
+                if (isNonEmptyString(element) && !isCompTypeStringOrObject(compType))
                 {   // Allow an entry of "" in the array to set the array element to null, *if* the array type is NOT String[] and NOT Object[]
                     Array.set(array, i, null);
                 }
@@ -676,6 +695,14 @@ public class ObjectResolver extends Resolver
             }
         }
         jsonObj.clearArray();
+    }
+
+    protected static boolean isNonEmptyString(Object element) {
+        return element instanceof String && "".equals(((String) element).trim());
+    }
+
+    protected static boolean isCompTypeStringOrObject(final Class compType) {
+        return compType == String.class || compType == Object.class;
     }
 
     /**
@@ -728,7 +755,7 @@ public class ObjectResolver extends Resolver
                     if (type != null)
                     {
                         typeStr = type;
-                        c = MetaUtils.classForName(type, classLoader);
+                        c = MetaUtilsHelper.classForName(type, classLoader);
                     }
                     else
                     {
